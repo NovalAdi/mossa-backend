@@ -89,6 +89,10 @@ const SWAGGER_UI_HTML = `<!DOCTYPE html>
 
 app.get("/api/docs", (c) => c.html(SWAGGER_UI_HTML));
 
+// ---------- ERD preview of database-schema.md ----------
+import { erdHandler } from "./routes/erd";
+app.get("/api/erd", erdHandler);
+
 app.route("/api/auth", authRouter);
 app.route("/api/bengkel", bengkelRouter);
 app.route("/api/customers", customersRouter);

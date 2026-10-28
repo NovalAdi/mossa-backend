@@ -17,4 +17,4 @@ database_id = "6183fbfd-45f8-4101-adec-f7ea3ae51f22"
 # [[d1_databases]]
 # binding = "DB"
 # database_name = "mossa-db-prod"
-# database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+# database_id = "xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx"
