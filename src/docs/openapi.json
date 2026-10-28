@@ -72,6 +72,11 @@
     },
     "/api/bengkel": {
       "get": {
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "tags": [
           "bengkel"
         ],
@@ -1454,6 +1459,14 @@
     }
   },
   "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Masukkan token JWT (tanpa kata 'Bearer ', cukup paste token yang didapat dari /api/auth/login)"
+      }
+    },
     "responses": {
       "Ok": {
         "description": "Success",
