@@ -1,10 +1,11 @@
 name = "mossa-backend"
+main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "mossa-db"
-database_id = "local-mossa-db"
+database_id = "6183fbfd-45f8-4101-adec-f7ea3ae51f22"
 
 # Remote production database (set after creating via `wrangler d1 create`)
 # [[d1_databases]]
