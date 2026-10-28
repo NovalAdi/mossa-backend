@@ -3,7 +3,6 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import type { AuthVariables } from "./types";
 import { protect } from "./middleware/auth";
-import swagger from "hono-swagger-ui";
 
 // ---------- Hono app ----------
 export const app = new Hono<{ Variables: AuthVariables }>();
@@ -45,28 +44,50 @@ import inventoryRouter from "./routes/inventory";
 import settingsRouter from "./routes/settings";
 import { OPENAPI_SPEC } from "./docs/openapi";
 
-// ---------- Swagger UI docs ----------
-// `swagger()` hooks `app.route` so the mounted route groups are tracked; it must
-// run BEFORE the app.route() calls below.
-export const swaggerUI = swagger(app as unknown as Hono, {
-  route: "/api/docs",
-  title: "Mossa Backend API",
-  version: "1.0.0",
-  description: "Mossa Backend REST API - Workshops App",
-  info: {
-    title: "Mossa Backend API",
-    version: "1.0.0",
-    description: "Mossa Backend REST API documentation",
-    contact: { name: "Mossa Team", email: "admin@mossa-backend.com" },
-    license: { name: "MIT" },
-  },
-});
-
-// Serve the authoritative OpenAPI spec at /api/docs/openapi.json.
-// It is registered BEFORE swaggerUI.init() so the first-registered route on this
-// path wins (Hono v4 matches first-registered), serving this complete spec
-// instead of swagger-ui's auto-generated-but-empty spec.
+// ---------- OpenAPI spec & Swagger UI docs ----------
+// Serves the authoritative spec (JSON) and a Swagger UI page that loads it
+// (CDN-hosted Swagger UI + specUrl). No node_modules dependency is imported here,
+// so the worker deploys without the fs/path incompatibilities of the old
+// hono-swagger-ui integration.
 app.get("/api/docs/openapi.json", (c) => c.json(OPENAPI_SPEC));
+
+const SWAGGER_UI_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mossa Backend API</title>
+  <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css"/>
+  <style>
+    body { margin: 0; background: #fafafa; }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
+  <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js"></script>
+  <script>
+    window.onload = function () {
+      const ui = SwaggerUIBundle({
+        url: window.location.origin + "/api/docs/openapi.json",
+        dom_id: "#swagger-ui",
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        plugins: [SwaggerUIBundle.plugins.DownloadUrl],
+        layout: "StandaloneLayout",
+        tryItOutEnabled: true,
+        docExpansion: "list",
+      });
+      window.ui = ui;
+    };
+  </script>
+</body>
+</html>`;
+
+app.get("/api/docs", (c) => c.html(SWAGGER_UI_HTML));
 
 app.route("/api/auth", authRouter);
 app.route("/api/bengkel", bengkelRouter);
@@ -82,10 +103,7 @@ app.route("/api/expenses", expensesRouter);
 app.route("/api/inventory", inventoryRouter);
 app.route("/api/settings", settingsRouter);
 
-// Register the Swagger routes (they are mounted on `app` by init() below).
-app.use("*", swaggerUI.init());
-
-// ---------- 404 fallback ----------
+// 404 fallback
 app.notFound((c) =>
   c.json({ success: false, error: `Route ${c.req.method} ${c.req.path} tidak ditemukan.` }, 404),
 );
