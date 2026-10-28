@@ -1,5 +1,5 @@
 import { Context } from "hono";
-import { Decimal } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 
 // ---------- Response builder ----------
 export const sendResponse = <T>(
@@ -36,14 +36,6 @@ export const catchAsync =
 
 // ---------- Serialization untuk Prisma Decimal dan Date -------------
 export function serialize(value: unknown): unknown {
-  if (value instanceof Decimal) return Number(value);
-  if (Array.isArray(value)) return value.map(serialize);
-  if (value !== null && typeof value === "object") {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      out[k] = serialize(v);
-    }
-    return out;
-  }
+  // TODO: Ganti dengan proper Decimal handling setelah @prisma/client fix
   return value;
 }

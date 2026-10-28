@@ -37,10 +37,13 @@ export const list = catchAsync(async (c) => {
 });
 
 export const get = catchAsync(async (c) => {
-  const item = await prisma.inventoryLog.findUnique({ where: { id: c.req.param("id") }, rejectOnNotFound: true });
-  if (!item || item.productId) {
-    // Product relation not loaded; verify via product lookup
-    const product = await prisma.product.findUnique({ where: { id: item?.productId || "" } });
+  const id = c.req.param("id");
+  const item = await prisma.inventoryLog.findUnique({ where: { id } });
+  if (!item) {
+    return c.json({ success: false, error: "Inventory log tidak ditemukan." }, 404);
+  }
+  if (item.productId) {
+    const product = await prisma.product.findUnique({ where: { id: item.productId } });
     if (!product || product.bengkelId !== c.get("user")!.bengkelId) {
       return c.json({ success: false, error: "Inventory log ini nggak milik bengkel ini." }, 403);
     }
@@ -62,7 +65,6 @@ export const create = catchAsync(async (c) => {
 
   const item = await prisma.inventoryLog.create({
     data: {
-      bengkelId: c.get("user")!.bengkelId,
       productId: product_id,
       type: type as any,
       quantity,

@@ -20,10 +20,11 @@ export const list = catchAsync(async (c) => {
 });
 
 export const getByKey = catchAsync(async (c) => {
-  const { key } = c.req.param();
+  const key = c.req.param("key");
+  const keyStr = key ?? "";
   const bengkelId = c.get("user")!.bengkelId;
   const item = await prisma.setting.findUnique({
-    where: { key_bengkelId: { key, bengkelId } },
+    where: { key_bengkelId: { key: keyStr, bengkelId } },
   });
   if (!item) {
     return c.json({ success: false, error: "Setting tidak ditemukan." }, 404);

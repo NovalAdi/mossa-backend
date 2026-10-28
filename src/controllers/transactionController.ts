@@ -20,8 +20,12 @@ export const list = catchAsync(async (c) => {
 });
 
 export const get = catchAsync(async (c) => {
-  const item = await prisma.transaction.findUnique({ where: { id: c.req.param("id") }, rejectOnNotFound: true });
-  if (!item || item.bengkelId !== c.get("user")!.bengkelId) {
+  const id = c.req.param("id");
+  const item = await prisma.transaction.findUnique({ where: { id } });
+  if (!item) {
+    return c.json({ success: false, error: "Transaction tidak ditemukan." }, 404);
+  }
+  if (item.bengkelId !== c.get("user")!.bengkelId) {
     return c.json({ success: false, error: "Transaction ini nggak milik bengkel ini." }, 403);
   }
   return sendResponse(c, item);

@@ -10,13 +10,19 @@ export const list = catchAsync(async (c) => {
   const [items, total] = await Promise.all([
     prisma.queueEntry.findMany({
       where: { bengkelId: c.get("user")!.bengkelId },
-      skip, take: limit, orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
       include: { vehicle: true, customer: true, serviceType: true, staff: true },
     }),
     prisma.queueEntry.count({ where: { bengkelId: c.get("user")!.bengkelId } }),
   ]);
 
-  sendResponse(c, items, { page, limit, total });
+  const serialized: unknown[] = [];
+  for (const entry of items) {
+    serialized.push(serialize(entry));
+  }
+  sendResponse(c, serialized, { page, limit, total });
 });
 
 export const getRealtime = catchAsync(async (c) => {
@@ -27,18 +33,22 @@ export const getRealtime = catchAsync(async (c) => {
   });
 
   // Estimate wait time based on queue position + service duration
-  const withEstimate = queue.map((entry, i) => {
+  const mapped: unknown[] = [];
+  for (let idx = 0; idx < queue.length; idx++) {
+    const entry = queue[idx];
+    if (!entry) continue;
     const est = entry.estimatedWaitMinutes || 0;
+    const serializedEntry = serialize(entry);
     const item = {
-      ...serialize(entry),
+      ...serializedEntry as Record<string, unknown>,
       estimatedWaitMinutes: est,
-      position: i + 1,
-      estimatedWaitText: i === 0 ? `${est} menit` : `${est * i} menit`,
+      position: idx + 1,
+      estimatedWaitText: idx === 0 ? `${est} menit` : `${est * (idx + 1)} menit`,
     };
-    return item;
-  });
+    mapped.push(item);
+  }
 
-  return sendResponse(c, withEstimate, { page: 1, limit: 20, total: queue.length });
+  return sendResponse(c, mapped, { page: 1, limit: 20, total: queue.length });
 });
 
 export const create = catchAsync(async (c) => {
@@ -61,10 +71,14 @@ export const create = catchAsync(async (c) => {
 
 export const updateStatus = catchAsync(async (c) => {
   const body = await c.req.json().catch(() => ({}));
-  const { status } = body as { status: string };
+  const status = (body as { status?: string }).status;
+
   const queueEntry = await prisma.queueEntry.update({
     where: { id: c.req.param("id"), bengkelId: c.get("user")!.bengkelId },
-    data: { status: status as any, startedAt: status === "in_progress" ? new Date() : undefined },
+    data: {
+      status: (status || "waiting") as any,
+      startedAt: status === "in_progress" ? new Date() : undefined,
+    },
   });
   return sendResponse(c, serialize(queueEntry));
 });

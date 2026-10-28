@@ -65,7 +65,8 @@ export const toggleActive = catchAsync(async (c) => {
 });
 
 export const trigger = catchAsync(async (c) => {
-  const item = await prisma.reminder.findUnique({ where: { id: c.req.param("id") }, rejectOnNotFound: true });
+  const id = c.req.param("id");
+  const item = await prisma.reminder.findUnique({ where: { id } });
   if (!item) {
     return c.json({ success: false, error: "Reminder ini nggak ditemukan." }, 404);
   }
@@ -75,7 +76,7 @@ export const trigger = catchAsync(async (c) => {
 
   // Create a reminder log entry (channel & message can be supplied via query/body)
   const channel = c.req.query("channel") || "sms";
-  const message = c.req.query("message") || `Ingat: servis ${item.serviceType?.name || "lengkap"} akan segera datang.`;
+  const message = c.req.query("message") || `Ingat: servis akan segera datang.`;
 
   const log = await prisma.reminderLog.create({
     data: {

@@ -74,9 +74,13 @@ export const protect = async (c: Context, next: Next) => {
   }
 
   const token = authHeader.split(" ")[1];
+  const secret = new TextEncoder().encode(JWT_SECRET);
+  if (!token) {
+    return c.json({ success: false, error: "Tidak ada token. Gunakan Bearer <token>." }, 401);
+  }
   try {
-    const { payload } = await jwtVerify(token, Secret);
-    const decoded = payload as AuthPayload;
+    const { payload } = await jwtVerify(token, secret);
+    const decoded = payload as unknown as AuthPayload;
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.sub },
@@ -103,7 +107,8 @@ export const allowedRoles = (...roles: string[]) => {
     if (!user) {
       return c.json({ success: false, error: "Harus login dulu." }, 401);
     }
-    if (roles.includes(user.role)) {
+    const role = user.role || "";
+    if (roles.includes(role)) {
       return next();
     }
     return c.json({ success: false, error: "Akses ditolak. Role tidak cukup." }, 403);
