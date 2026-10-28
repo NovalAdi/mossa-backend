@@ -5,6 +5,8 @@ compatibility_date = "2024-12-01"
 # Production environment
 [env.prod]
 name = "mossa-backend"
+JWT_SECRET = "change-me"
+JWT_EXPIRES_IN = "7d"
 
 [[d1_databases]]
 binding = "DB"

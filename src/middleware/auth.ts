@@ -10,10 +10,15 @@ export interface AuthPayload {
   bengkelId: string;
 }
 
-export const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
+// Read from Cloudflare env (bindings), set di index.ts
+// Declare global env vars for Cloudflare Workers
+declare global {
+  var JWT_SECRET: string;
+  var JWT_EXPIRES_IN: string;
+}
 
-// Encode secret ke UTF-8 bytes (jose butuh ArrayBuffer)
-const Secret = new TextEncoder().encode(JWT_SECRET);
+export const JWT_SECRET = globalThis.JWT_SECRET || "dev-secret-change-me";
+export const JWT_EXPIRES_IN = globalThis.JWT_EXPIRES_IN || "7d";
 
 /**
  * Login handler — public (untuk di-protect oleh route layer).
@@ -43,8 +48,8 @@ export const login = async (c: Context) => {
 
   const token = await new SignJWT({ sub: user.id, email: user.email, role: user.role, bengkelId: user.bengkelId })
     .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime(process.env.JWT_EXPIRES_IN || "7d")
-    .sign(Secret);
+    .setExpirationTime(globalThis.JWT_EXPIRES_IN || "7d")
+    .sign(new TextEncoder().encode(JWT_SECRET));
 
   return c.json({
     success: true,
