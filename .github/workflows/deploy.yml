@@ -30,19 +30,8 @@ jobs:
       - name: Build & type-check
         run: npm run build && npx tsc --noEmit
 
-      - name: Create D1 database
-        if: github.ref == 'refs/heads/main'
-        run: |
-          wrangler d1 create mossa-db --local-id mossa-prod-db
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
-      - name: Apply D1 migrations
-        if: github.ref == 'refs/heads/main'
-        run: |
-          wrangler d1 migrations apply mossa-db --local-id mossa-prod-db
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - name: Generate Prisma client
+        run: npx prisma generate
 
       - name: Deploy to Cloudflare
         run: |
