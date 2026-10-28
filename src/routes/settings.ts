@@ -1,0 +1,12 @@
+import { Hono } from "hono";
+import { protect } from "../middleware/auth";
+import * as ctrl from "../controllers/settingsController";
+
+const router = new Hono<{ Variables: { user: any } }>();
+
+router.use(protect);
+router.get("/", ctrl.list);
+router.get("/:key", ctrl.getByKey);
+router.post("/", ctrl.set);
+
+export default router;

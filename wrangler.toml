@@ -1,0 +1,13 @@
+name = "mossa-backend"
+compatibility_date = "2024-12-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "mossa-db"
+database_id = "local-mossa-db"
+
+# Remote production database (set after creating via `wrangler d1 create`)
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "mossa-db-prod"
+# database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"

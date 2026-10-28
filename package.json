@@ -1,0 +1,32 @@
+{
+  "name": "mossa-backend",
+  "version": "1.0.0",
+  "description": "Backend Manajemen & Katalog Bengkel (car workshop) - Cloudflare Workers + D1",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "prisma generate",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev",
+    "migrate:dev": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/adapter-d1": "^7.0.0",
+    "@prisma/client": "^6.19.3",
+    "bcryptjs": "^3.0.3",
+    "hono": "^4.13.14",
+    "jose": "^6.2.13",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241205.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^26.6.5",
+    "prisma": "^6.19.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "wrangler": "^3.99.0"
+  }
+}

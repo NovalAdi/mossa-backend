@@ -1,0 +1,380 @@
+// Generator: output JS client for the Prisma schema
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+// ---------------------------------------------------------------------------
+// Datasource: SQLite via Cloudflare D1
+// ---------------------------------------------------------------------------
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums (nilai yang diijinkan, selaras dengan skema DB)
+// ---------------------------------------------------------------------------
+
+enum ServiceCategory {
+  kecil
+  besar
+  berat
+}
+
+enum QueueStatus {
+  waiting
+  in_progress
+  done
+  cancelled
+  no_show
+}
+
+enum BookingStatus {
+  booked
+  confirmed
+  cancelled
+  completed
+  no_show
+}
+
+enum ReminderLogStatus {
+  sent
+  failed
+  pending
+  snoozed
+}
+
+enum ReminderChannel {
+  sms
+  push
+  email
+}
+
+enum PaymentMethod {
+  cash
+  transfer
+  credit_card
+}
+
+enum ExpenseCategory {
+  listrik
+  air
+  internet
+  gaji
+  bensin
+  sewa
+  perlengkapan
+  sparepart
+  lainnya
+}
+
+// ---------------------------------------------------------------------------
+// Tabel: bengkel
+// ---------------------------------------------------------------------------
+model Bengkel {
+  id             String    @id @default(cuid())
+  name           String   @unique
+  description    String?
+  address        String?
+  latitude       Float?
+  longitude      Float?
+  phone          String?
+  email          String?
+  logoUrl        String?
+  openingHours   Json?
+  photoUrl       String?
+  users          User[]
+  customers      Customer[]
+  vehicles       Vehicle[]
+  serviceTypes   ServiceType[]
+  products       Product[]
+  queueEntries   QueueEntry[]
+  bookings       Booking[]
+  serviceHistories ServiceHistory[]
+  reminders      Reminder[]
+  transactions   Transaction[]
+  expenses       Expense[]
+  settings       Setting[]
+}
+
+// ---------------------------------------------------------------------------
+// Tabel: users  (login staff/admin)
+// ---------------------------------------------------------------------------
+model User {
+  id              String   @id @default(cuid())
+  bengkelId       String
+  bengkel         Bengkel  @relation(fields: [bengkelId], references: [id], onDelete: Cascade)
+  name            String
+  email           String   @unique
+  passwordHash    String
+  role            String   // admin | staff
+  phone           String?
+  avatarUrl       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt()
+  queueEntries    QueueEntry[]
+  bookings        Booking[]
+  serviceHistories ServiceHistory[]
+}
+
+// ---------------------------------------------------------------------------
+// Tabel: customers  (pemesan / pemilik kendaraan)
+// ---------------------------------------------------------------------------
+model Customer {
+  id               String   @id @default(cuid())
+  bengkelId        String
+  bengkel          Bengkel  @relation(fields: [bengkelId], references: [id], onDelete: Cascade)
+  name             String
+  email            String?
+  phone            String?
+  address          String?
+  note             String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt()
+  vehicles         Vehicle[]
+  queueEntries     QueueEntry[]
+  bookings         Booking[]
+  serviceHistories ServiceHistory[]
+  transactions     Transaction[]
+}
+
+// ---------------------------------------------------------------------------
+// Tabel: vehicles  (kendaraan)
+// ---------------------------------------------------------------------------
+model Vehicle {
+  id               String   @id @default(cuid())
+  bengkelId        String
+  bengkel          Bengkel  @relation(fields: [bengkelId], references: [id], onDelete: Cascade)
+  customerId       String?
+  customer         Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  plate            String?
+  brand            String?
+  model            String?
+  year             Int?
+  color            String?
+  engineType       String?
+  vin              String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt()
+  queueEntries     QueueEntry[]
+  bookings         Booking[]
+  reminders        Reminder[]
+  serviceHistories ServiceHistory[]
+  transactions     Transaction[]
+}
+
+// ---------------------------------------------------------------------------
+// Tabel: service_types  (daftar servis / perbaikan)
+// ---------------------------------------------------------------------------
+model ServiceType {
+  id               String   @id @default(cuid())
+  bengkelId        String
+  bengkel          Bengkel  @relation(fields: [bengkelId], references: [id], onDelete: Cascade)
+  name             String
+  category         ServiceCategory
+  description      String?
+  estimatedMinutes Int?
+  price            Decimal?
+  icon             String?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt()
+  queueEntries     QueueEntry[]
+  bookings         Booking[]
+  serviceHistories ServiceHistory[]
+  reminders        Reminder[]
+}
+
+// ---------------------------------------------------------------------------
+// Tabel: products  (sparepart / produk)
+// ---------------------------------------------------------------------------
+model Product {
+  id         String   @id @default(cuid())
+  bengkelId  String
+  bengkel    Bengkel  @relation(fields: [bengkelId], references: [id], onDelete: Cascade)
+  name       String
+  category   String?
+  sku        String?
+  barcode    String?
+  unitPrice  Decimal?
+  stock      Int      @default(0)
+  minStock   Int      @default(0)
+  photoUrl   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt()
+  inventoryLogs InventoryLog[]
+}
+
+// ---------------------------------------------------------------------------
+// Tabel: queue_entries  (antrean real-time)
+// ---------------------------------------------------------------------------
+model QueueEntry {
+  id                   String    @id @default(cuid())
+  bengkelId            String
+  bengkel              Bengkel   @relation(fields: [bengkelId], references: [id], onDelete: Cascade)
+  vehicleId            String?
+  vehicle              Vehicle?  @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  customerId           String?
+  customer             Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  serviceTypeId        String?
+  serviceType          ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
+  staffId              String?
+  staff                User?     @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  serviceHistories     ServiceHistory[]  // lawan dari ServiceHistory.queueEntry
+  status               QueueStatus @default(waiting)
+  queuePosition        Int?
+  estimatedWaitMinutes Int?
+  createdAt            DateTime @default(now())
+  startedAt            DateTime?
+  completedAt          DateTime?
+  note                 String?
+}
+
+// ---------------------------------------------------------------------------
+// Tabel: bookings  (slot antrean terjadwal)
+// ---------------------------------------------------------------------------
+model Booking {
+  id               String      @id @default(cuid())
+  bengkelId        String
+  bengkel          Bengkel     @relation(fields: [bengkelId], references: [id], onDelete: Cascade)
+  customerId       String?
+  customer         Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  vehicleId        String?
+  vehicle          Vehicle?    @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  serviceTypeId    String?
+  serviceType      ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
+  staffId          String?
+  staff            User?       @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  serviceHistories ServiceHistory[]
+  slotDate         DateTime
+  slotTime         String?
+  status           BookingStatus @default(booked)
+  createdAt        DateTime @default(now())
+  confirmedAt      DateTime?
+  completedAt      DateTime?
+}
+
+// ---------------------------------------------------------------------------
+// Tabel: reminders  (jadwal pengingat servis)
+// ---------------------------------------------------------------------------
+model Reminder {
+  id               String   @id @default(cuid())
+  bengkelId        String
+  bengkel          Bengkel  @relation(fields: [bengkelId], references: [id], onDelete: Cascade)
+  vehicleId        String?
+  vehicle          Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  serviceTypeId    String?
+  serviceType      ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
+  intervalDays     Int?
+  nextReminderAt   DateTime?
+  lastRemindedAt   DateTime?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt()
+  reminderLogs     ReminderLog[]
+}
+
+// ---------------------------------------------------------------------------
+// Tabel: reminder_logs  (log notifikasi)
+// ---------------------------------------------------------------------------
+model ReminderLog {
+  id                       String       @id @default(cuid())
+  maintenanceReminderId    String
+  reminder                 Reminder     @relation(fields: [maintenanceReminderId], references: [id], onDelete: Cascade)
+  channel                  ReminderChannel?
+  message                  String?
+  status                   ReminderLogStatus @default(pending)
+  sentAt                   DateTime?
+  createdAt                DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Tabel: service_histories  (riwayat servis)
+// ---------------------------------------------------------------------------
+model ServiceHistory {
+  id               String      @id @default(cuid())
+  bengkelId        String
+  bengkel          Bengkel     @relation(fields: [bengkelId], references: [id], onDelete: Cascade)
+  vehicleId        String?
+  vehicle          Vehicle?    @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  customerId       String?
+  customer         Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  serviceTypeId    String?
+  serviceType      ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
+  queueEntryId     String?
+  queueEntry       QueueEntry? @relation(fields: [queueEntryId], references: [id], onDelete: SetNull)
+  bookingId        String?
+  booking          Booking?    @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  staffId          String?
+  staff            User?       @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  status           String      // completed | cancelled
+  totalPrice       Decimal?
+  subItems         Json?       // { product: {id, qty}[] }
+  note             String?
+  completedAt      DateTime
+  createdAt        DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Tabel: transactions  (pemasukan / income)
+// ---------------------------------------------------------------------------
+model Transaction {
+  id            String    @id @default(cuid())
+  bengkelId     String
+  bengkel       Bengkel   @relation(fields: [bengkelId], references: [id], onDelete: Cascade)
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  vehicleId     String?
+  vehicle       Vehicle?  @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  serviceKey    String?
+  amount        Decimal?
+  paymentMethod PaymentMethod
+  referenceNo   String?
+  createdAt     DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Tabel: expenses  (pengeluaran / RAB)
+// ---------------------------------------------------------------------------
+model Expense {
+  id         String    @id @default(cuid())
+  bengkelId  String
+  bengkel    Bengkel   @relation(fields: [bengkelId], references: [id], onDelete: Cascade)
+  name       String
+  category   ExpenseCategory?
+  amount     Decimal?
+  paymentMethod PaymentMethod
+  date       DateTime
+  note       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt()
+}
+
+// ---------------------------------------------------------------------------
+// Tabel: inventory_logs  (stok sparepart in/out)
+// ---------------------------------------------------------------------------
+model InventoryLog {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type       String   // in | out
+  quantity   Int
+  reason     String?
+  referenceId String?
+  createdAt  DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Tabel: settings  (konfigurasi aplikasi - key/value, scoped per bengkel)
+// ---------------------------------------------------------------------------
+model Setting {
+  id        String   @id @default(cuid())
+  key       String
+  bengkelId String
+  bengkel   Bengkel  @relation(fields: [bengkelId], references: [id], onDelete: Cascade)
+  @@unique([key, bengkelId])
+  value     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt()
+}
